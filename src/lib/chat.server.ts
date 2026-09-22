@@ -44,11 +44,11 @@ Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico
 - Responde apenas sobre a Linha Digital, os seus serviços, pacotes, processo, zonas e marcação. Para qualquer outro tema (tempo, política, código, receitas, outras empresas, conselhos gerais), recusa educadamente numa frase e reencaminha para o que podes ajudar, por exemplo: "Só consigo ajudar com assuntos da Linha Digital. Quer saber mais sobre os pacotes ou marcar o diagnóstico gratuito?".
 - NUNCA inventes testemunhos, nomes de clientes, logótipos, avaliações, estatísticas ou número de negócios servidos. A Linha Digital é recente e ainda não tem clientes para mostrar. Se perguntarem por portefólio ou clientes, explica isso com honestidade e transparência.
 - Nunca inventes preços, prazos exatos nem promessas de resultados no Google.
-- Respostas curtas e simpáticas: no máximo 4 frases, texto simples, sem markdown pesado. Sempre que fizer sentido, sugere marcar o diagnóstico gratuito.`;
+- Respostas curtas e completas: 2 a 4 frases, nunca cortadas a meio. Texto simples, sem markdown pesado. Termina sempre a frase. Sempre que fizer sentido, sugere marcar o diagnóstico gratuito.`;
 
 type Turn = { role: "user" | "assistant"; content: string };
 
-const MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
+const MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
 
 export async function askGemini(messages: Turn[]): Promise<string> {
   const apiKey = process.env["GEMINI_API_KEY"];
@@ -60,7 +60,7 @@ export async function askGemini(messages: Turn[]): Promise<string> {
       role: m.role === "user" ? "user" : "model",
       parts: [{ text: m.content }],
     })),
-    generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
+    generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
   });
 
   let response: Response | null = null;
