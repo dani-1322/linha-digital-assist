@@ -23,8 +23,9 @@ export const Route = createFileRoute("/")({
 
 const bookingHref = "#marcar";
 
-function PrimaryLink({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <a href={bookingHref} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${className}`}>{children}</a>;
+function PrimaryLink({ children, className = "", tone = "primary" }: { children: ReactNode; className?: string; tone?: "primary" | "coral" }) {
+  const tones = { primary: "bg-primary text-primary-foreground hover:bg-primary/90", coral: "bg-coral text-coral-foreground hover:bg-coral/90" } as const;
+  return <a href={bookingHref} className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-md ${tones[tone]} px-5 py-3 text-sm font-bold shadow-lg ${tone === "coral" ? "shadow-coral/25" : "shadow-primary/20"} transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${className}`}>{children}</a>;
 }
 
 const businessTypes = [
