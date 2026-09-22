@@ -53,7 +53,7 @@ export async function askGemini(messages: Turn[]): Promise<string> {
   if (!apiKey) throw new Error("MISSING_KEY");
 
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
     {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
