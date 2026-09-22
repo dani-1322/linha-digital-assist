@@ -6,6 +6,7 @@ import {
   ShieldCheck, ShoppingBag, Sparkles, Store, Wrench, X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { ChatWidget } from "@/components/ChatWidget";
 
 export const Route = createFileRoute("/")({
   head: () => ({
