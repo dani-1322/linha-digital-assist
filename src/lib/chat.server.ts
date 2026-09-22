@@ -49,6 +49,7 @@ Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico
 type Turn = { role: "user" | "assistant"; content: string };
 
 const MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
+const ATTEMPTS = [0, 800, 2000, 4000, 7000];
 
 export async function askGemini(messages: Turn[]): Promise<string> {
   const apiKey = process.env["GEMINI_API_KEY"];
@@ -63,27 +64,43 @@ export async function askGemini(messages: Turn[]): Promise<string> {
     generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
   });
 
-  let response: Response | null = null;
-  for (const model of MODELS) {
-    response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-        body,
-      },
-    );
-    if (response.ok) break;
-    const detail = await response.text();
-    console.error("Gemini error", model, response.status, detail.slice(0, 300));
-    if (response.status !== 503 && response.status !== 429) break;
+  let payload: unknown = null;
+  let lastStatus = "NO_RESPONSE";
+
+  outer: for (const delay of ATTEMPTS) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    for (const model of MODELS) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+            body,
+            signal: AbortSignal.timeout(20_000),
+          },
+        );
+        if (response.ok) {
+          payload = await response.json();
+          break outer;
+        }
+        lastStatus = String(response.status);
+        const detail = await response.text();
+        console.error("Gemini error", model, response.status, detail.slice(0, 500));
+        if (response.status !== 503 && response.status !== 429 && response.status < 500) break outer;
+      } catch (error) {
+        lastStatus = "NETWORK";
+        console.error("Gemini fetch failed", model, error instanceof Error ? error.message : error);
+      }
+    }
   }
 
-  if (!response || !response.ok) throw new Error(`GEMINI_${response?.status ?? "NO_RESPONSE"}`);
+  if (!payload) throw new Error(`GEMINI_${lastStatus}`);
 
-  const payload = (await response.json()) as {
+  const parsed = payload as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
   };
-  const text = payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
+  const text = parsed.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
+  if (!text) console.error("Gemini empty reply", JSON.stringify(parsed).slice(0, 500));
   return text || "Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para daniel.alves.132203@gmail.com.";
 }

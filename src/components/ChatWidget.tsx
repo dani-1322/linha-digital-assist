@@ -39,23 +39,17 @@ export function ChatWidget() {
     setMessages(next);
     setInput("");
     setBusy(true);
+    const FALLBACK =
+      "Não consegui responder neste momento. Tente outra vez dentro de instantes ou marque o diagnóstico gratuito no botão abaixo.";
     try {
-      const result = await ask({ data: { messages: next.map(({ role, content }) => ({ role, content })) } });
-      setMessages([
-        ...next,
-        {
-          role: "assistant",
-          content:
-            result.reply ??
-            result.error ??
-            "Não consegui responder neste momento. Tente outra vez dentro de instantes.",
-        },
-      ]);
+      const result = (await Promise.race([
+        ask({ data: { messages: next.map(({ role, content }) => ({ role, content })) } }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 90_000)),
+      ])) as { reply: string | null; error: string | null };
+      const content = result?.reply?.trim() || result?.error || FALLBACK;
+      setMessages([...next, { role: "assistant", content }]);
     } catch {
-      setMessages([
-        ...next,
-        { role: "assistant", content: "Houve um problema de ligação. Tente novamente dentro de momentos." },
-      ]);
+      setMessages([...next, { role: "assistant", content: FALLBACK }]);
     } finally {
       setBusy(false);
     }
