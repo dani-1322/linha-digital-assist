@@ -48,31 +48,38 @@ Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico
 
 type Turn = { role: "user" | "assistant"; content: string };
 
+const MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
+
 export async function askGemini(messages: Turn[]): Promise<string> {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) throw new Error("MISSING_KEY");
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: messages.slice(-12).map((m) => ({
-          role: m.role === "user" ? "user" : "model",
-          parts: [{ text: m.content }],
-        })),
-        generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
-      }),
-    },
-  );
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: messages.slice(-12).map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    })),
+    generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
+  });
 
-  if (!response.ok) {
+  let response: Response | null = null;
+  for (const model of MODELS) {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body,
+      },
+    );
+    if (response.ok) break;
     const detail = await response.text();
-    console.error("Gemini error", response.status, detail.slice(0, 500));
-    throw new Error(`GEMINI_${response.status}`);
+    console.error("Gemini error", model, response.status, detail.slice(0, 300));
+    if (response.status !== 503 && response.status !== 429) break;
   }
+
+  if (!response || !response.ok) throw new Error(`GEMINI_${response?.status ?? "NO_RESPONSE"}`);
 
   const payload = (await response.json()) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
