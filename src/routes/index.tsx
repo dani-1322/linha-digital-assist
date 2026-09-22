@@ -6,6 +6,7 @@ import {
   ShieldCheck, ShoppingBag, Sparkles, Store, Wrench, X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { ChatWidget } from "@/components/ChatWidget";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -117,6 +118,8 @@ function Index() {
 
       <section className="bg-surface-cool py-16"><div className="section-shell flex flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left"><div><h2 className="text-2xl font-semibold">O seu próximo cliente já está a procurar.</h2><p className="mt-2 text-muted-foreground">Ajude-o a encontrar o seu negócio.</p></div><PrimaryLink>Marcar diagnóstico gratuito <CalendarDays size={18}/></PrimaryLink></div></section>
     </main>
+
+    <ChatWidget />
 
     <footer className="bg-deep py-12 text-deep-foreground"><div className="section-shell grid gap-10 border-b border-deep-foreground/10 pb-10 md:grid-cols-3"><div><a href="#inicio" className="font-display text-lg font-bold">Linha Digital</a><p className="mt-3 max-w-xs text-sm leading-6 text-deep-foreground/60">Sites simples para negócios locais da Linha de Sintra.</p></div><div><p className="text-sm font-bold">Explorar</p><div className="mt-4 flex flex-col gap-3 text-sm text-deep-foreground/60"><a href="#servicos">Serviços</a><a href="#pacotes">Pacotes</a><a href="#faq">FAQ</a></div></div><div><p className="text-sm font-bold">Contacto</p><a href="mailto:daniel.alves.132203@gmail.com" className="mt-4 inline-flex items-center gap-2 break-all text-sm text-deep-foreground/60 hover:text-deep-foreground"><Mail size={16}/>daniel.alves.132203@gmail.com</a></div></div><div className="section-shell pt-7 text-xs text-deep-foreground/45">© 2026 Linha Digital. Feito perto, para negócios locais.</div></footer>
   </div>;
