@@ -77,7 +77,7 @@ export async function askGemini(messages: Turn[]): Promise<string> {
             method: "POST",
             headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
             body,
-            signal: AbortSignal.timeout(30_000),
+            signal: AbortSignal.timeout(20_000),
           },
         );
         if (response.ok) {

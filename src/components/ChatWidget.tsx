@@ -44,7 +44,7 @@ export function ChatWidget() {
     try {
       const result = (await Promise.race([
         ask({ data: { messages: next.map(({ role, content }) => ({ role, content })) } }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 45_000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), 90_000)),
       ])) as { reply: string | null; error: string | null };
       const content = result?.reply?.trim() || result?.error || FALLBACK;
       setMessages([...next, { role: "assistant", content }]);
