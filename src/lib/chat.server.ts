@@ -48,7 +48,7 @@ Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico
 
 type Turn = { role: "user" | "assistant"; content: string };
 
-const MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
+const MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
 
 export async function askGemini(messages: Turn[]): Promise<string> {
   const apiKey = process.env["GEMINI_API_KEY"];
