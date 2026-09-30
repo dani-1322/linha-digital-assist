@@ -44,16 +44,32 @@ Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico
 - Responde apenas sobre a Linha Digital, os seus serviços, pacotes, processo, zonas e marcação. Para qualquer outro tema (tempo, política, código, receitas, outras empresas, conselhos gerais), recusa educadamente numa frase e reencaminha para o que podes ajudar, por exemplo: "Só consigo ajudar com assuntos da Linha Digital. Quer saber mais sobre os pacotes ou marcar o diagnóstico gratuito?".
 - NUNCA inventes testemunhos, nomes de clientes, logótipos, avaliações, estatísticas ou número de negócios servidos. A Linha Digital é recente e ainda não tem clientes para mostrar. Se perguntarem por portefólio ou clientes, explica isso com honestidade e transparência.
 - Nunca inventes preços, prazos exatos nem promessas de resultados no Google.
-- Respostas curtas e completas: 2 a 4 frases, nunca cortadas a meio. Texto simples, sem markdown pesado. Termina sempre a frase. Sempre que fizer sentido, sugere marcar o diagnóstico gratuito.`;
+- Respostas curtas e completas: 2 a 4 frases, nunca cortadas a meio. Só texto simples, sem qualquer markdown: nada de asteriscos, negrito, itálico, cardinais ou listas. Termina sempre a frase. Sempre que fizer sentido, sugere marcar o diagnóstico gratuito.`;
 
 type Turn = { role: "user" | "assistant"; content: string };
 
-const MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
+// The chat widget shows plain text, so strip any markdown the model still sends.
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[*-]\s+/gm, "• ")
+    .replace(/\*([^*\n]+)\*/g, "$1");
+}
+
+const DEFAULT_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
 const ATTEMPTS = [0, 800, 2000, 4000, 7000];
 
 export async function askGemini(messages: Turn[]): Promise<string> {
   const apiKey = process.env["GEMINI_API_KEY"];
   if (!apiKey) throw new Error("MISSING_KEY");
+
+  // GEMINI_MODEL is optional: when set it is tried first, with the defaults as fallback.
+  const configured = process.env["GEMINI_MODEL"]?.trim();
+  const models = configured
+    ? [configured, ...DEFAULT_MODELS.filter((m) => m !== configured)]
+    : DEFAULT_MODELS;
 
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -69,7 +85,7 @@ export async function askGemini(messages: Turn[]): Promise<string> {
 
   outer: for (const delay of ATTEMPTS) {
     if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-    for (const model of MODELS) {
+    for (const model of models) {
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -102,5 +118,5 @@ export async function askGemini(messages: Turn[]): Promise<string> {
   };
   const text = parsed.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
   if (!text) console.error("Gemini empty reply", JSON.stringify(parsed).slice(0, 500));
-  return text || "Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para daniel.alves.132203@gmail.com.";
+  return (text && stripMarkdown(text)) || "Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para daniel.alves.132203@gmail.com.";
 }
