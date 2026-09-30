@@ -4,7 +4,13 @@
 //     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
+import { existsSync } from "node:fs";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+
+// Vite only exposes VITE_* vars (to the client) and never fills process.env, so server
+// functions can't see .env secrets locally. Load them here. In production the secrets
+// come from Lovable and there is no .env, so this does nothing there.
+if (existsSync(".env")) process.loadEnvFile(".env");
 
 export default defineConfig({
   tanstackStart: {
