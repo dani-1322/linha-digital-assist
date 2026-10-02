@@ -82,10 +82,13 @@ export async function askGemini(messages: Turn[]): Promise<string> {
 
   let payload: unknown = null;
   let lastStatus = "NO_RESPONSE";
+  // A model that returns 404 (wrong or retired name) is skipped, so it can't take the chat down.
+  const notFound = new Set<string>();
 
   outer: for (const delay of ATTEMPTS) {
     if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
     for (const model of models) {
+      if (notFound.has(model)) continue;
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -103,6 +106,11 @@ export async function askGemini(messages: Turn[]): Promise<string> {
         lastStatus = String(response.status);
         const detail = await response.text();
         console.error("Gemini error", model, response.status, detail.slice(0, 500));
+        if (response.status === 404) {
+          notFound.add(model);
+          if (notFound.size === models.length) break outer;
+          continue;
+        }
         if (response.status !== 503 && response.status !== 429 && response.status < 500) break outer;
       } catch (error) {
         lastStatus = "NETWORK";
