@@ -17,10 +17,15 @@ passa ao Vite, que corre em Node. Duas consequências:
 - **Nunca dar o prefixo `VITE_` a uma variável secreta.** Tudo o que começa por `VITE_`
   vai parar ao código que corre no navegador.
 
+**Formato das linhas: `NOME=valor`, sem espaços à volta do `=`.** Uma linha como
+`ADMIN_UID = ` (espaço depois do `=` e sem valor) faz o leitor do Node "engolir" a linha
+seguinte: a variável vazia fica com o texto da linha de baixo, e essa deixa de ser lida.
+Variáveis ainda por preencher ficam como `ADMIN_UID=`.
+
 | Variável | Para que serve | Onde obter |
 |---|---|---|
 | `GEMINI_API_KEY` | Chatbot e interpretação dos pedidos | Google AI Studio → Get API key |
-| `GEMINI_MODEL` | Opcional. Modelo a tentar primeiro; se não estiver definida, usa `gemini-3.6-flash` e, se este falhar temporariamente, `gemini-3.5-flash` | Nome de um modelo do Google AI Studio, ex: `gemini-3.6-flash` |
+| `GEMINI_MODEL` | Opcional. Modelo a tentar primeiro; se não estiver definida, usa `gemini-3.6-flash` e, se este falhar temporariamente, `gemini-3.5-flash`. Um nome que não exista (404) é ignorado | Nome de um modelo do Google AI Studio, ex: `gemini-3.6-flash` |
 | `FIREBASE_SERVICE_ACCOUNT` | Autenticação do servidor ao Firestore | Consola Firebase → Definições do projeto → Contas de serviço → gerar chave privada (JSON), guardado em base64 |
 | `RESEND_API_KEY` | Envio da notificação interna | resend.com → API Keys |
 | `EMAIL_ALUNO` | Destinatário das notificações | O email associado à conta Resend |

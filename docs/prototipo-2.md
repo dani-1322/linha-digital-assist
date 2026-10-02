@@ -253,7 +253,66 @@ com a resposta real e com itálico, títulos e listas, confirmando que hífens n
 
 ## Fase 1 — Formulário e Firestore
 
-_(a preencher)_
+**Resultado.** Secção "Pedido de proposta" na landing page, a seguir aos Pacotes (os
+botões "Pedir proposta" dos cartões levam até lá), com nome, email e pedido em texto livre.
+A função de servidor `submitPedido` valida os dados com zod e grava o pedido na coleção
+`pedidos` com o estado `recebido` e os campos que as fases seguintes vão preencher. O
+cliente vê "O seu pedido foi recebido com sucesso." e nunca uma referência a email. Testado
+com uma gravação real no Firestore.
+
+### Acesso ao Firestore pela API REST, sem `firebase-admin`
+
+**Problema.** A forma habitual de um servidor escrever no Firestore é o SDK
+`firebase-admin`. Mas o Lovable não corre o servidor num Node normal: a configuração de
+build (`@lovable.dev/vite-tanstack-config`) usa o preset `cloudflare-module` do Nitro, ou
+seja, Cloudflare Workers.
+
+**Diagnóstico.** O `firebase-admin` depende de gRPC e de outras APIs do Node que não há
+garantia de existirem em Workers. Funcionaria em local e arriscava partir só depois de
+publicar, exatamente o tipo de falha que a regra 2 do projeto quer evitar.
+
+**Decisão.** Um cliente mínimo (`firestore.server.ts`) que usa apenas `fetch` e Web Crypto,
+disponíveis tanto em Node como em Workers: assina um JWT RS256 com a chave da conta de
+serviço, troca-o por um token OAuth (guardado em cache até expirar) e escreve pela API REST
+do Firestore. Sem dependências novas. A assinatura foi verificada localmente com uma chave
+gerada no momento, e o fluxo completo com a conta de serviço real.
+
+**Alternativas rejeitadas.** `firebase-admin` (risco em produção, acima); o SDK web do
+Firebase no servidor (autentica como cliente, ficando sujeito às regras de segurança que
+bloqueiam acessos diretos).
+
+### Envios repetidos não duplicam pedidos
+
+**Decisão.** O formulário gera um identificador aleatório e reutiliza-o se o utilizador
+tentar outra vez depois de um erro. O servidor usa-o como ID do documento; se já existir, a
+API responde 409 e isso é tratado como sucesso. Assim, um pedido que foi gravado mas cuja
+resposta se perdeu (por exemplo, por tempo limite) não fica guardado duas vezes. Testado
+com uma segunda escrita com o mesmo ID, que devolveu "já existe".
+
+### Uma variável vazia no `.env` "engolia" a linha seguinte
+
+**Problema.** Com a conta de serviço no `.env`, a `FIREBASE_SERVICE_ACCOUNT` não era lida.
+
+**Diagnóstico.** A linha anterior era `ADMIN_UID = ` (espaço depois do `=`, sem valor). Um
+teste com valores fictícios mostrou que o `process.loadEnvFile` do Node, nesse caso
+específico, usa a linha seguinte como valor: `ADMIN_UID` ficava com o texto da linha de
+baixo e `FIREBASE_SERVICE_ACCOUNT` deixava de existir. `NOME=` vazio e `NOME = valor` são
+lidos corretamente.
+
+**Decisão.** Normalizar o `.env` para `NOME=valor` e documentar o formato em
+`docs/configuracao.md`.
+
+### Um nome de modelo inválido deitava o chatbot abaixo
+
+**Problema.** Com `GEMINI_MODEL=gemini-2.5-flash` no `.env`, o chatbot deixou de responder.
+
+**Diagnóstico.** A Google responde 404 a esse modelo, que já não existe. O código tratava
+qualquer erro que não fosse temporário (503, 429, 5xx) como definitivo e desistia, sem
+tentar os modelos de reserva.
+
+**Decisão.** Um modelo que devolve 404 é ignorado e passa-se ao seguinte. Uma variável
+opcional mal configurada não pode deixar o chatbot sem resposta (regra 5). Testado com o
+mesmo `.env`: o 404 aparece no log e a resposta chega pelo modelo por omissão.
 
 ## Fase 2 — Catálogo e Gemini
 
