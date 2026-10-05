@@ -25,3 +25,22 @@ export const submitPedido = createServerFn({ method: "POST" })
       };
     }
   });
+
+// Called by the browser right after a successful submit, without the client waiting for it:
+// interpretation can take tens of seconds. Each request is processed at most once (only while
+// "recebido") and its random 128-bit id is known only to whoever submitted it.
+export const processPedido = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => PedidoInput.pick({ id: true }).parse(input))
+  .handler(async ({ data }) => {
+    const { processarPedido } = await import("./pedidos.server");
+    try {
+      return { estado: await processarPedido(data.id) };
+    } catch (error) {
+      console.error(
+        "processPedido failed",
+        data.id,
+        error instanceof Error ? error.message : error,
+      );
+      return { estado: "erro" as const };
+    }
+  });

@@ -1,7 +1,7 @@
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CalendarDays, CheckCircle2 } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
-import { submitPedido } from "@/lib/pedidos.functions";
+import { processPedido, submitPedido } from "@/lib/pedidos.functions";
 
 type Estado = "editar" | "a_enviar" | "enviado" | "erro";
 
@@ -20,6 +20,7 @@ function novoId(): string {
 
 export function PedidoPropostaForm() {
   const enviar = useServerFn(submitPedido);
+  const processar = useServerFn(processPedido);
   const [estado, setEstado] = useState<Estado>("editar");
   const [erro, setErro] = useState(FALLBACK);
   // Kept across retries, so a request that was saved but timed out is not stored twice.
@@ -45,6 +46,9 @@ export function PedidoPropostaForm() {
       ])) as { ok: boolean; error: string | null };
       if (result.ok) {
         setEstado("enviado");
+        // The request is already saved; its interpretation runs on, without the client waiting.
+        // If it fails, the request is marked "erro" and can be reprocessed later.
+        processar({ data: { id } }).catch(() => {});
       } else {
         setErro(result.error ?? FALLBACK);
         setEstado("erro");

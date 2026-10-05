@@ -111,6 +111,72 @@ function encodeFields(data: { [key: string]: FirestoreValue }): Record<string, u
   return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, encodeValue(value)]));
 }
 
+type RestValue = {
+  nullValue?: null;
+  booleanValue?: boolean;
+  integerValue?: string;
+  doubleValue?: number;
+  stringValue?: string;
+  timestampValue?: string;
+  referenceValue?: string;
+  arrayValue?: { values?: RestValue[] };
+  mapValue?: { fields?: Record<string, RestValue> };
+};
+
+function decodeValue(value: RestValue): FirestoreValue {
+  if (value.booleanValue !== undefined) return value.booleanValue;
+  if (value.integerValue !== undefined) return Number(value.integerValue);
+  if (value.doubleValue !== undefined) return value.doubleValue;
+  if (value.stringValue !== undefined) return value.stringValue;
+  if (value.timestampValue !== undefined) return new Date(value.timestampValue);
+  if (value.referenceValue !== undefined) return value.referenceValue;
+  if (value.arrayValue) return (value.arrayValue.values ?? []).map(decodeValue);
+  if (value.mapValue) return decodeFields(value.mapValue.fields ?? {});
+  return null;
+}
+
+function decodeFields(fields: Record<string, RestValue>): { [key: string]: FirestoreValue } {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key, decodeValue(value)]),
+  );
+}
+
+export type FirestoreDocument = { id: string; data: { [key: string]: FirestoreValue } };
+
+type RestDocument = { name: string; fields?: Record<string, RestValue> };
+
+function toDocument(doc: RestDocument): FirestoreDocument {
+  return {
+    id: doc.name.slice(doc.name.lastIndexOf("/") + 1),
+    data: decodeFields(doc.fields ?? {}),
+  };
+}
+
+/** Authenticated request to `.../documents/<path>`. Non-2xx statuses are returned, not thrown. */
+async function request(method: string, path: string, body?: unknown): Promise<Response> {
+  const account = readServiceAccount();
+  const token = await getAccessToken(account);
+  const url =
+    `https://firestore.googleapis.com/v1/projects/${account.project_id}/databases/(default)` +
+    `/documents/${path}`;
+  return fetch(url, {
+    method,
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    signal: AbortSignal.timeout(10_000),
+  });
+}
+
+async function fail(action: string, path: string, response: Response): Promise<never> {
+  console.error(
+    `Firestore ${action} error`,
+    path,
+    response.status,
+    (await response.text()).slice(0, 500),
+  );
+  throw new Error(`FIRESTORE_${response.status}`);
+}
+
 /**
  * Creates `collection/id`. Returns "exists" instead of failing when the document is already
  * there, so a repeated submission with the same id is safe to retry.
@@ -120,25 +186,54 @@ export async function createDocument(
   id: string,
   data: { [key: string]: FirestoreValue },
 ): Promise<"created" | "exists"> {
-  const account = readServiceAccount();
-  const token = await getAccessToken(account);
-  const url =
-    `https://firestore.googleapis.com/v1/projects/${account.project_id}/databases/(default)` +
-    `/documents/${collection}?documentId=${encodeURIComponent(id)}`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify({ fields: encodeFields(data) }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  const path = `${collection}?documentId=${encodeURIComponent(id)}`;
+  const response = await request("POST", path, { fields: encodeFields(data) });
   if (response.ok) return "created";
   if (response.status === 409) return "exists";
-  console.error(
-    "Firestore write error",
-    collection,
-    response.status,
-    (await response.text()).slice(0, 500),
-  );
-  throw new Error(`FIRESTORE_${response.status}`);
+  return fail("write", path, response);
+}
+
+export async function getDocument(
+  collection: string,
+  id: string,
+): Promise<FirestoreDocument | null> {
+  const path = `${collection}/${encodeURIComponent(id)}`;
+  const response = await request("GET", path);
+  if (response.status === 404) return null;
+  if (!response.ok) return fail("read", path, response);
+  return toDocument((await response.json()) as RestDocument);
+}
+
+/** Every document in a collection, optionally ordered (e.g. "criadoEm desc"). */
+export async function listDocuments(
+  collection: string,
+  orderBy?: string,
+): Promise<FirestoreDocument[]> {
+  const documents: FirestoreDocument[] = [];
+  let pageToken = "";
+  do {
+    const params = new URLSearchParams({ pageSize: "300" });
+    if (orderBy) params.set("orderBy", orderBy);
+    if (pageToken) params.set("pageToken", pageToken);
+    const path = `${collection}?${params}`;
+    const response = await request("GET", path);
+    if (!response.ok) return fail("list", path, response);
+    const page = (await response.json()) as { documents?: RestDocument[]; nextPageToken?: string };
+    documents.push(...(page.documents ?? []).map(toDocument));
+    pageToken = page.nextPageToken ?? "";
+  } while (pageToken);
+  return documents;
+}
+
+/** Overwrites only the given fields of an existing document (fails if it does not exist). */
+export async function updateDocument(
+  collection: string,
+  id: string,
+  data: { [key: string]: FirestoreValue },
+): Promise<void> {
+  const params = new URLSearchParams({ "currentDocument.exists": "true" });
+  for (const field of Object.keys(data)) params.append("updateMask.fieldPaths", field);
+  const path = `${collection}/${encodeURIComponent(id)}?${params}`;
+  const response = await request("PATCH", path, { fields: encodeFields(data) });
+  if (!response.ok) return fail("update", path, response);
 }
