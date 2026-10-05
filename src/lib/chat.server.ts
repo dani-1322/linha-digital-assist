@@ -1,3 +1,5 @@
+import { generateText } from "./gemini.server";
+
 export const SYSTEM_PROMPT = `És o assistente virtual da Linha Digital. Escreves SEMPRE em português europeu (PT-PT), nunca em português do Brasil. Usa "está a fazer" (não "está fazendo"), "telemóvel", "ecrã", "contacto", "utilizador".
 
 # Quem somos
@@ -58,20 +60,8 @@ function stripMarkdown(text: string): string {
     .replace(/\*([^*\n]+)\*/g, "$1");
 }
 
-const DEFAULT_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
-const ATTEMPTS = [0, 800, 2000, 4000, 7000];
-
 export async function askGemini(messages: Turn[]): Promise<string> {
-  const apiKey = process.env["GEMINI_API_KEY"];
-  if (!apiKey) throw new Error("MISSING_KEY");
-
-  // GEMINI_MODEL is optional: when set it is tried first, with the defaults as fallback.
-  const configured = process.env["GEMINI_MODEL"]?.trim();
-  const models = configured
-    ? [configured, ...DEFAULT_MODELS.filter((m) => m !== configured)]
-    : DEFAULT_MODELS;
-
-  const body = JSON.stringify({
+  const text = await generateText({
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: messages.slice(-12).map((m) => ({
       role: m.role === "user" ? "user" : "model",
@@ -79,52 +69,8 @@ export async function askGemini(messages: Turn[]): Promise<string> {
     })),
     generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
   });
-
-  let payload: unknown = null;
-  let lastStatus = "NO_RESPONSE";
-  // A model that returns 404 (wrong or retired name) is skipped, so it can't take the chat down.
-  const notFound = new Set<string>();
-
-  outer: for (const delay of ATTEMPTS) {
-    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-    for (const model of models) {
-      if (notFound.has(model)) continue;
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: "POST",
-            headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-            body,
-            signal: AbortSignal.timeout(20_000),
-          },
-        );
-        if (response.ok) {
-          payload = await response.json();
-          break outer;
-        }
-        lastStatus = String(response.status);
-        const detail = await response.text();
-        console.error("Gemini error", model, response.status, detail.slice(0, 500));
-        if (response.status === 404) {
-          notFound.add(model);
-          if (notFound.size === models.length) break outer;
-          continue;
-        }
-        if (response.status !== 503 && response.status !== 429 && response.status < 500) break outer;
-      } catch (error) {
-        lastStatus = "NETWORK";
-        console.error("Gemini fetch failed", model, error instanceof Error ? error.message : error);
-      }
-    }
-  }
-
-  if (!payload) throw new Error(`GEMINI_${lastStatus}`);
-
-  const parsed = payload as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-  };
-  const text = parsed.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();
-  if (!text) console.error("Gemini empty reply", JSON.stringify(parsed).slice(0, 500));
-  return (text && stripMarkdown(text)) || "Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para daniel.alves.132203@gmail.com.";
+  return (
+    (text && stripMarkdown(text)) ||
+    "Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para daniel.alves.132203@gmail.com."
+  );
 }

@@ -25,7 +25,7 @@ Variáveis ainda por preencher ficam como `ADMIN_UID=`.
 | Variável | Para que serve | Onde obter |
 |---|---|---|
 | `GEMINI_API_KEY` | Chatbot e interpretação dos pedidos | Google AI Studio → Get API key |
-| `GEMINI_MODEL` | Opcional. Modelo a tentar primeiro; se não estiver definida, usa `gemini-3.6-flash` e, se este falhar temporariamente, `gemini-3.5-flash`. Um nome que não exista (404) é ignorado | Nome de um modelo do Google AI Studio, ex: `gemini-3.6-flash` |
+| `GEMINI_MODEL` | Opcional. Modelo a tentar primeiro, antes dos modelos de reserva definidos em `src/lib/gemini.server.ts`. Um nome que não exista (404) é ignorado | Nome de um modelo do Google AI Studio, ex: `gemini-3.6-flash` |
 | `FIREBASE_SERVICE_ACCOUNT` | Autenticação do servidor ao Firestore | Consola Firebase → Definições do projeto → Contas de serviço → gerar chave privada (JSON), guardado em base64 |
 | `RESEND_API_KEY` | Envio da notificação interna | resend.com → API Keys |
 | `EMAIL_ALUNO` | Destinatário das notificações | O email associado à conta Resend |
@@ -59,6 +59,12 @@ segurança do Firestore e a verificação de autorização no backend.
 ### Google AI Studio
 - Chave do Gemini com quota gratuita
 - Não ativar billing nem mudar para modelos pagos
+- **Quota gratuita: 20 pedidos por dia, por modelo, contados por projeto e não por chave**
+  (verificado a 5 de outubro de 2026). Renova à meia-noite da hora do Pacífico, cerca das
+  8h00 em Lisboa. Os testes locais gastam a mesma quota que o site publicado, se a chave for
+  do mesmo projeto. Por isso o código usa vários modelos de reserva (cada um tem a sua
+  quota) e salta logo um modelo cuja quota diária acabou.
+- Uso atual e limites: https://aistudio.google.com/rate-limit
 
 ### Cal.com
 - Evento "Diagnóstico gratuito", 15 a 20 minutos
