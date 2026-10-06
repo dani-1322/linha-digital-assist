@@ -512,4 +512,46 @@ emitidas guardam a sua própria cópia e não mudam.
 
 ## Fase 5 — Notificação e testes
 
-_(a preencher)_
+**Resultado.** Quando uma proposta é criada (automaticamente ou ao resolver uma revisão), o
+Resend envia uma notificação **ao aluno** (`EMAIL_ALUNO`), a partir de
+`onboarding@resend.dev`, com o número, o cliente, o resumo, o valor, o link da proposta e o
+link da área de administração. O cliente nunca recebe emails; o email do formulário só
+aparece como dado dentro da notificação interna. Na área de administração, cada pedido mostra
+"Notificação ao aluno" com o estado e, quando não foi aceite, o motivo e um botão "Enviar
+notificação".
+
+### Estados honestos da notificação
+
+**Decisão.** Os estados seguem o enunciado: `por_enviar`, `aceite` (só quando a API do Resend
+confirma e devolve um identificador, que fica guardado em `resendId`), `falhou` (o Resend
+respondeu com erro; a resposta fica em `erroNotificacao`) e `nao_configurado` (faltam
+`RESEND_API_KEY` ou `EMAIL_ALUNO`). Foi acrescentado um estado intermédio, `a_enviar`
+("Por confirmar"), para quando a ligação cai e não se sabe se o Resend aceitou. "Aceite pelo
+serviço" não é o mesmo que entregue na caixa de entrada, e a interface não diz o contrário.
+
+O estado da notificação é independente do estado do pedido: uma falha no email nunca marca o
+pedido como `erro`.
+
+### Reenviar sem duplicar
+
+**Problema.** Uma notificação pode ter de ser reenviada (falhou, não estava configurada, ou a
+ligação caiu), mas o aluno não deve receber o mesmo email duas vezes.
+
+**Decisão.** Duas proteções:
+- depois de `aceite`, nunca se envia de novo, por mais que se peça (testado: o segundo pedido
+  manteve o mesmo `resendId` e uma só tentativa);
+- cada tentativa leva uma `Idempotency-Key` (`proposta-<id>-<tentativa>`). Se a última tentativa
+  ficou sem resposta (`a_enviar`), a seguinte reutiliza a mesma chave: se o Resend já tinha
+  aceitado, devolve a mesma resposta em vez de enviar outro email.
+
+### O conteúdo do cliente nunca é HTML no email
+
+**Decisão.** O nome do cliente e o resumo (que vem da IA) são escapados antes de entrar no
+HTML do email. Testado com um nome `<script>…</script>` e um resumo com `<b>`: ambos aparecem
+como texto. O email tem também uma versão em texto simples.
+
+**Testes:** escape do HTML; sem `RESEND_API_KEY` → `nao_configurado`, sem envio; envio real →
+`aceite` com o identificador do Resend; novo pedido de envio da mesma proposta → nada enviado.
+Na área de administração: "Enviar notificação" numa proposta `nao_configurado` → `aceite`; e o
+fluxo automático completo ("Processar de novo" num pedido parado → proposta criada →
+notificação `aceite`), cada um com uma única tentativa.

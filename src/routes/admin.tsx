@@ -7,6 +7,7 @@ import {
   adminDetalhePedido,
   adminGuardarItem,
   adminListarPedidos,
+  adminNotificar,
   adminReprocessar,
   adminResolver,
   adminSessao,
@@ -50,6 +51,7 @@ const NOTIFICACOES: Record<string, string> = {
   aceite: "Aceite pelo serviço",
   falhou: "Falhou",
   nao_configurado: "Não configurado",
+  a_enviar: "Por confirmar",
 };
 
 const botao =
@@ -291,6 +293,14 @@ function Pedidos({ token }: { token: Token }) {
                     ? (NOTIFICACOES[linha.estadoNotificacao] ?? linha.estadoNotificacao)
                     : "—"}
                 </p>
+                {linha.propostaId && linha.estadoNotificacao !== "aceite" && (
+                  <EnviarNotificacao
+                    propostaId={linha.propostaId}
+                    erro={linha.erroNotificacao}
+                    token={token}
+                    onAlterado={() => void carregar()}
+                  />
+                )}
                 {linha.link && (
                   <a
                     href={linha.link}
@@ -316,6 +326,47 @@ function Pedidos({ token }: { token: Token }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+function EnviarNotificacao({
+  propostaId,
+  erro,
+  token,
+  onAlterado,
+}: {
+  propostaId: string;
+  erro: string | null;
+  token: Token;
+  onAlterado: () => void;
+}) {
+  const [ocupado, setOcupado] = useState(false);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+
+  async function enviar() {
+    setOcupado(true);
+    try {
+      const r = await adminNotificar({ data: { idToken: await token(), id: propostaId } });
+      setMensagem(r.ok ? r.dados : r.erro);
+    } catch {
+      setMensagem("Não foi possível enviar a notificação.");
+    }
+    setOcupado(false);
+    onAlterado();
+  }
+
+  return (
+    <div className="flex flex-col gap-1 md:items-end">
+      {erro && <p className="max-w-xs text-xs text-destructive">{erro}</p>}
+      <button
+        onClick={() => void enviar()}
+        disabled={ocupado}
+        className="text-xs font-bold text-primary underline underline-offset-4 disabled:opacity-50"
+      >
+        {ocupado ? "A enviar…" : "Enviar notificação"}
+      </button>
+      {mensagem && <p className="max-w-xs text-xs text-muted-foreground">{mensagem}</p>}
+    </div>
   );
 }
 

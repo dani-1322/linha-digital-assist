@@ -1,6 +1,7 @@
 import { listarCatalogoAtivo } from "./catalogo.server";
 import { createDocument, getDocument, updateDocument } from "./firestore.server";
 import { interpretarPedido } from "./interpretacao.server";
+import { notificarSemFalhar } from "./notificacoes.server";
 import { calcularProposta, criarProposta } from "./propostas.server";
 
 export type EstadoPedido =
@@ -66,6 +67,8 @@ export async function processarPedido(id: string): Promise<EstadoPedido | "ignor
       estado,
       atualizadoEm: new Date(),
     });
+    // After the request is saved as "proposta_criada"; never throws.
+    if (propostaId) await notificarSemFalhar(propostaId);
     return estado;
   } catch (error) {
     const anteriores = pedido.data["errosProcessamento"];

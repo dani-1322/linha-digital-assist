@@ -7,6 +7,7 @@ import {
   type FirestoreDocument,
 } from "./firestore.server";
 import type { Interpretacao } from "./interpretacao.server";
+import { notificarProposta, notificarSemFalhar } from "./notificacoes.server";
 import { processarPedido, type EstadoPedido } from "./pedidos.server";
 import { calcularProposta, criarProposta, euros } from "./propostas.server";
 
@@ -29,7 +30,9 @@ export type LinhaPedido = {
   resumo: string;
   estado: EstadoPedido;
   valor: string | null;
+  propostaId: string | null;
   estadoNotificacao: string | null;
+  erroNotificacao: string | null;
   link: string | null;
 };
 
@@ -61,7 +64,9 @@ export async function listarPedidos(): Promise<LinhaPedido[]> {
       resumo: texto(interpretacao?.resumo) || texto(d["textoOriginal"]).slice(0, 140),
       estado: texto(d["estado"]) as EstadoPedido,
       valor: valorProposta(proposta),
+      propostaId: proposta?.id ?? null,
       estadoNotificacao: proposta ? texto(proposta.data["estadoNotificacao"]) || null : null,
+      erroNotificacao: proposta ? texto(proposta.data["erroNotificacao"]) || null : null,
       link: proposta ? texto(proposta.data["link"]) || null : null,
     };
   });
@@ -146,7 +151,21 @@ export async function resolverPedido(
     revistoEm: new Date(),
     atualizadoEm: new Date(),
   });
+  await notificarSemFalhar(propostaId);
   return { ok: true, mensagem: "Proposta criada." };
+}
+
+const RESULTADOS_NOTIFICACAO = {
+  aceite: "Notificação aceite pelo Resend.",
+  falhou: "O Resend recusou a notificação. O motivo ficou registado.",
+  nao_configurado: "Notificação não configurada: faltam RESEND_API_KEY ou EMAIL_ALUNO.",
+  a_enviar: "Sem resposta do Resend. Pode tentar outra vez sem risco de email duplicado.",
+  por_enviar: "Notificação por enviar.",
+} as const;
+
+/** Sends a proposal's notification again. Once Resend has accepted it, nothing is sent. */
+export async function enviarNotificacao(propostaId: string): Promise<string> {
+  return RESULTADOS_NOTIFICACAO[await notificarProposta(propostaId)];
 }
 
 export function catalogoCompleto() {

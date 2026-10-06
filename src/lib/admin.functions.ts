@@ -79,6 +79,13 @@ export const adminResolver = createServerFn({ method: "POST" })
     return comAdmin(data.idToken, () => resolverPedido(data.id, data.itens));
   });
 
+export const adminNotificar = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => ComPedido.parse(input))
+  .handler(async ({ data }) => {
+    const { enviarNotificacao } = await import("./admin.server");
+    return comAdmin(data.idToken, () => enviarNotificacao(data.id));
+  });
+
 export const adminCatalogo = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Token.parse(input))
   .handler(async ({ data }) => {
