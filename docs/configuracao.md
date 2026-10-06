@@ -67,6 +67,8 @@ pessoal do aluno.
 - Remetente fixo: `onboarding@resend.dev`
 - **Sem domínio próprio, o Resend só aceita enviar para o email da própria conta.** É por
   isso que a notificação vai para o aluno e não para o cliente.
+- Os emails de `onboarding@resend.dev` tendem a ir para o spam do Gmail. No Gmail: filtro para
+  esse remetente com "Nunca enviar para o spam"
 
 ### Google AI Studio
 - Chave do Gemini com quota gratuita, no projeto `linha-digital-gemini` da conta do negócio

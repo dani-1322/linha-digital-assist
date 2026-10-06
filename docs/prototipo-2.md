@@ -154,13 +154,16 @@ Testar e fazer commit entre cada fase.
 
 ## Critério de conclusão
 
-- [ ] Submeter um pedido na landing page
-- [ ] Encontrá-lo guardado no Firestore
-- [ ] Ver a interpretação estruturada
-- [ ] Confirmar os cálculos com os preços do catálogo
-- [ ] Abrir a página da proposta
-- [ ] Receber a notificação no email da conta Resend
-- [ ] Consultar e gerir o pedido na área privada
+- [x] Submeter um pedido na landing page
+- [x] Encontrá-lo guardado no Firestore
+- [x] Ver a interpretação estruturada
+- [x] Confirmar os cálculos com os preços do catálogo
+- [x] Abrir a página da proposta
+- [x] Receber a notificação no email da conta Resend
+- [x] Consultar e gerir o pedido na área privada
+
+Todos verificados no site publicado a 6 de outubro de 2026 (ver "Teste final em produção",
+no fim do registo de decisões).
 
 ---
 
@@ -555,3 +558,59 @@ como texto. O email tem também uma versão em texto simples.
 Na área de administração: "Enviar notificação" numa proposta `nao_configurado` → `aceite`; e o
 fluxo automático completo ("Processar de novo" num pedido parado → proposta criada →
 notificação `aceite`), cada um com uma única tentativa.
+
+### A notificação chega ao spam
+
+**Problema.** No teste em produção, a notificação foi aceite pelo Resend mas chegou à pasta de
+spam do Gmail.
+
+**Causa.** O remetente é `onboarding@resend.dev`, um endereço partilhado pelas contas de teste
+do Resend, sem domínio próprio. É exatamente a diferença entre "aceite pelo serviço" e
+"entregue na caixa de entrada" que o estado `aceite` não promete.
+
+**Decisão.** Para o protótipo: marcar a mensagem como "Não é spam" e criar no Gmail um filtro
+para `onboarding@resend.dev` com "Nunca enviar para o spam". A solução definitiva é verificar
+um domínio próprio no Resend, que fica para quando o negócio tiver domínio.
+
+## Contas do negócio
+
+**Problema.** O site e as contas dos serviços estavam no email pessoal do aluno, que aparecia
+publicamente na página e no assistente.
+
+**Decisões.**
+- Foi criado o email `linhadigital.admin@gmail.com`. O email de contacto público passou a estar
+  definido num só sítio (`src/lib/contacto.ts`), usado pela página inicial, pela página da
+  proposta, pelo formulário, pelo assistente e pelas mensagens de erro.
+- Cal.com, Resend, Gemini, o email de suporte do Firebase e o administrador (`ADMIN_UID`)
+  passaram para essa conta. O GitHub e o Lovable ficaram na conta pessoal: mudá-los obrigaria a
+  refazer a ligação entre os dois no dia da entrega.
+- A chave do Gemini ficou num projeto próprio (`linha-digital-gemini`), separado do projeto do
+  Firebase: se o Firebase passar um dia para um plano com faturação, o Gemini continua no nível
+  gratuito. Antes de decidir, confirmou-se que a chave pública do Firebase (que está no código do
+  navegador) é recusada pela API do Gemini, por isso partilhar o projeto não a expunha.
+- Os commits passaram a usar o endereço `noreply` do GitHub em vez de um email, com o push
+  bloqueado no GitHub se algum commit expuser o email. Os commits antigos não foram alterados,
+  porque isso obrigaria a reescrever o histórico já publicado.
+
+**Problema encontrado.** Mudar o nome de utilizador no Cal.com fez o link antigo dar 404, e o
+widget de marcação do site publicado ficou partido até à publicação seguinte. Lição: mudar
+primeiro o link no código, publicar, e só depois mudar o nome de utilizador (ou fazer as duas
+coisas no mesmo momento).
+
+## Teste final em produção
+
+Feito no site publicado, com um pedido de teste ("TESTE produção final - pode apagar"):
+
+| Critério | Resultado |
+|---|---|
+| Submeter um pedido | Gravado em 0,4 s |
+| Guardado no Firestore | Estado `proposta_criada`, sem erros de processamento |
+| Interpretação estruturada | `reformulacao` ×1 e `perfil-google` ×1, sem revisão |
+| Cálculos | 450,00 € + 50,00 € = 500,00 €, iguais aos preços do catálogo |
+| Página da proposta | `LD-20261006-FA9FCF` abre, com o aviso de demonstração, sem o email nem o texto do cliente, e com `noindex` |
+| Notificação | `aceite` à primeira tentativa; chegou ao email do negócio (no spam, ver acima) |
+| Área privada | Login com a conta do negócio; o pedido aparece com a proposta e a notificação |
+
+A interpretação demorou cerca de 60 segundos, provavelmente por sobrecarga do Gemini e
+passagem para um modelo de reserva. O cliente não espera por esse tempo: a confirmação aparece
+logo a seguir ao envio, e o processamento corre à parte.
