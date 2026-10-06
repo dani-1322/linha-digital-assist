@@ -454,7 +454,61 @@ pesquisa não chegariam a ler o `noindex`.
 
 ## Fase 4 — Administração
 
-_(a preencher)_
+**Resultado.** Área `/admin` com login Google (Firebase Authentication), acessível só à conta
+cujo UID está em `ADMIN_UID`. Mostra o aviso de "Modo de aula" e permite:
+- listar os pedidos (data, nome, email, resumo, estado, valor da proposta, notificação ao
+  aluno e link), com filtro por estado;
+- abrir o pedido original, a interpretação da IA, a informação em falta, o motivo da revisão
+  e os erros;
+- processar de novo pedidos com erro ou parados;
+- resolver pedidos em revisão;
+- gerir o catálogo (editar, ativar/desativar e criar serviços).
+
+Testado localmente com a conta real: lista, filtro, detalhe, abertura da proposta e
+"Processar de novo" num pedido parado, que passou a "Proposta criada" com o valor esperado.
+
+### O login é verificado no servidor, em todas as operações
+
+**Problema.** Fazer login com Google não pode tornar ninguém administrador, e esconder
+botões no navegador não protege nada.
+
+**Decisão.** O navegador envia o token de login do Firebase em cada operação, e o servidor
+verifica-o antes de fazer seja o que for: assinatura RS256 com as chaves públicas da Google
+(Web Crypto, sem `firebase-admin`, pelo mesmo motivo da Fase 1), projeto (`aud`), emissor
+(`iss`), validade (`exp`, `iat`) e, por fim, se o UID é o `ADMIN_UID`. Testado com três
+tokens falsos (texto qualquer, um JWT com `alg: none` e um JWT com uma chave inventada):
+todos recusados, sem acesso aos pedidos.
+
+**Configurar o administrador.** Quem entra com uma conta que não é a do administrador vê
+"Sem acesso" e o seu próprio UID, para o copiar para `ADMIN_UID`. Mostrar o UID da própria
+conta não dá acesso a nada; quem decide é sempre o servidor.
+
+### O navegador nunca acede à base de dados
+
+**Decisão.** O SDK do Firebase no navegador é usado só para o login, e só é carregado na
+página `/admin` (a landing page não fica mais pesada). Todas as leituras e escritas no
+Firestore passam por funções de servidor, com a conta de serviço. Por isso, as regras de
+segurança do Firestore podem negar todo o acesso direto. A configuração web do Firebase
+(`apiKey`, etc.) está no código: são identificadores públicos, não credenciais.
+
+**Login por janela (popup), não por redirecionamento.** O endereço de autenticação do
+Firebase é diferente do site; com as restrições atuais dos navegadores ao armazenamento entre
+sites, o login por redirecionamento é menos fiável. Se o navegador bloquear a janela, a
+página explica como permitir.
+
+### Resolver pedidos em revisão sem abrir mão das regras
+
+**Decisão.** Na revisão, o administrador escolhe os serviços e as quantidades, mas não
+escreve preços: o código calcula com os preços do catálogo e cria a proposta exatamente como
+nos casos automáticos. "Processar de novo" aceita pedidos com erro e também pedidos parados
+em "recebido" ou "em análise" (por exemplo, quando o navegador do cliente fechou antes de o
+processamento correr, ou pedidos criados antes de a Fase 3 existir).
+
+### Gerir o catálogo
+
+**Decisão.** O catálogo pode ser editado no `/admin`, com os dados validados no servidor. Um
+serviço desativado deixa de ser enviado à IA e de entrar em propostas novas; as propostas já
+emitidas guardam a sua própria cópia e não mudam.
 
 ## Fase 5 — Notificação e testes
 

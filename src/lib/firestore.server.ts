@@ -32,6 +32,11 @@ function readServiceAccount(): ServiceAccount {
   throw new Error("FIRESTORE_INVALID_SERVICE_ACCOUNT");
 }
 
+/** The Firebase project the server works with (used to check login tokens). */
+export function firebaseProjectId(): string {
+  return readServiceAccount().project_id;
+}
+
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);

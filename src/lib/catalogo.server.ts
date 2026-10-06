@@ -4,7 +4,7 @@ import { listDocuments } from "./firestore.server";
 // The `catalogo` collection is the only source of prices. Documents are validated on read,
 // so a malformed entry edited by hand in the Firebase console is skipped instead of breaking
 // every proposal.
-const ItemSchema = z.object({
+export const ItemSchema = z.object({
   nome: z.string().min(1),
   descricao: z.string(),
   unidade: z.enum(["pacote", "unidade", "hora"]),
@@ -18,7 +18,8 @@ const ItemSchema = z.object({
 
 export type ItemCatalogo = z.infer<typeof ItemSchema> & { id: string };
 
-export async function listarCatalogoAtivo(): Promise<ItemCatalogo[]> {
+/** Valid catalogue items; inactive ones only when asked (the admin area lists them too). */
+export async function listarCatalogo(incluirInativos = false): Promise<ItemCatalogo[]> {
   const documents = await listDocuments("catalogo");
   const itens: ItemCatalogo[] = [];
   for (const doc of documents) {
@@ -27,7 +28,11 @@ export async function listarCatalogoAtivo(): Promise<ItemCatalogo[]> {
       console.error("Catalogo: item inválido ignorado", doc.id, parsed.error.issues[0]?.message);
       continue;
     }
-    if (parsed.data.ativo) itens.push({ id: doc.id, ...parsed.data });
+    if (incluirInativos || parsed.data.ativo) itens.push({ id: doc.id, ...parsed.data });
   }
   return itens;
+}
+
+export function listarCatalogoAtivo(): Promise<ItemCatalogo[]> {
+  return listarCatalogo(false);
 }

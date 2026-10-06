@@ -180,7 +180,7 @@ export type ResultadoProposta =
   { estado: "ok"; proposta: PropostaPublica } | { estado: "nao_encontrada" | "expirada" };
 
 // Formatted on the server so the page renders identical text on the server and in the browser.
-const euros = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
+export const euros = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
 const dataLonga = new Intl.DateTimeFormat("pt-PT", {
   day: "numeric",
   month: "long",

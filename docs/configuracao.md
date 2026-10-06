@@ -31,7 +31,7 @@ Variáveis ainda por preencher ficam como `ADMIN_UID=`.
 | `EMAIL_ALUNO` | Destinatário das notificações | O email associado à conta Resend |
 | `APP_BASE_URL` | Construir os links absolutos das propostas. Opcional: se faltar, usa o endereço do Lovable | `https://linha-digital-assist.lovable.app` |
 | `PROPOSTA_VALIDADE_DIAS` | Opcional. Validade das propostas em dias (por omissão, 15) | Um número inteiro, ex: `15` |
-| `ADMIN_UID` | Único utilizador autorizado no `/admin` | Obtém-se após o primeiro login Google |
+| `ADMIN_UID` | Único utilizador autorizado no `/admin` | Entrar em `/admin` com a conta Google: a página "Sem acesso" mostra o identificador a usar |
 
 ## O que é secreto e o que não é
 
@@ -49,7 +49,12 @@ segurança do Firestore e a verificação de autorização no backend.
 - Projeto criado em console.firebase.google.com
 - **Cloud Firestore** ativo, em modo de produção
 - **Authentication** com o método de início de sessão **Google** ativo
-- Regras de segurança que impedem leituras e escritas públicas diretas nas coleções
+- Domínios autorizados no Authentication: `localhost` e `linha-digital-assist.lovable.app`
+  (e o domínio próprio, quando existir)
+- App Web registada; a configuração pública (`apiKey`, `authDomain`, `projectId`, `appId`)
+  está em `src/lib/firebase-web.ts`
+- Regras de segurança que impedem leituras e escritas públicas diretas nas coleções. O
+  navegador nunca acede ao Firestore: só o servidor, com a conta de serviço
 
 ### Resend
 - Conta criada com o email onde as notificações devem chegar
