@@ -13,7 +13,7 @@ mas o negócio é real.
 ## Stack
 
 React 19 · TanStack Start (encaminhamento e funções de servidor) · Vite ·
-Tailwind CSS v4 · shadcn/ui + Radix · Google Gemini API · Cloud Firestore ·
+Tailwind CSS v4 · Google Gemini API · Cloud Firestore ·
 Firebase Authentication · Resend · Cal.com · alojado no Lovable Cloud.
 
 ## Como correr
