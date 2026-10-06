@@ -29,7 +29,8 @@ Variáveis ainda por preencher ficam como `ADMIN_UID=`.
 | `FIREBASE_SERVICE_ACCOUNT` | Autenticação do servidor ao Firestore | Consola Firebase → Definições do projeto → Contas de serviço → gerar chave privada (JSON), guardado em base64 |
 | `RESEND_API_KEY` | Envio da notificação interna | resend.com → API Keys |
 | `EMAIL_ALUNO` | Destinatário das notificações | O email associado à conta Resend |
-| `APP_BASE_URL` | Construir os links absolutos das propostas | `https://linha-digital-assist.lovable.app` |
+| `APP_BASE_URL` | Construir os links absolutos das propostas. Opcional: se faltar, usa o endereço do Lovable | `https://linha-digital-assist.lovable.app` |
+| `PROPOSTA_VALIDADE_DIAS` | Opcional. Validade das propostas em dias (por omissão, 15) | Um número inteiro, ex: `15` |
 | `ADMIN_UID` | Único utilizador autorizado no `/admin` | Obtém-se após o primeiro login Google |
 
 ## O que é secreto e o que não é

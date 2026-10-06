@@ -152,13 +152,16 @@ function toDocument(doc: RestDocument): FirestoreDocument {
   };
 }
 
-/** Authenticated request to `.../documents/<path>`. Non-2xx statuses are returned, not thrown. */
+/**
+ * Authenticated request to `.../documents/<path>` (or `.../documents:<method>` when the path
+ * starts with ":"). Non-2xx statuses are returned, not thrown.
+ */
 async function request(method: string, path: string, body?: unknown): Promise<Response> {
   const account = readServiceAccount();
   const token = await getAccessToken(account);
   const url =
     `https://firestore.googleapis.com/v1/projects/${account.project_id}/databases/(default)` +
-    `/documents/${path}`;
+    `/documents${path.startsWith(":") ? "" : "/"}${path}`;
   return fetch(url, {
     method,
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
@@ -223,6 +226,27 @@ export async function listDocuments(
     pageToken = page.nextPageToken ?? "";
   } while (pageToken);
   return documents;
+}
+
+/** The first document whose `field` equals `value`, or null. */
+export async function findDocument(
+  collection: string,
+  field: string,
+  value: string,
+): Promise<FirestoreDocument | null> {
+  const response = await request("POST", ":runQuery", {
+    structuredQuery: {
+      from: [{ collectionId: collection }],
+      where: {
+        fieldFilter: { field: { fieldPath: field }, op: "EQUAL", value: { stringValue: value } },
+      },
+      limit: 1,
+    },
+  });
+  if (!response.ok) return fail("query", collection, response);
+  const results = (await response.json()) as { document?: RestDocument }[];
+  const found = results.find((r) => r.document)?.document;
+  return found ? toDocument(found) : null;
 }
 
 /** Overwrites only the given fields of an existing document (fails if it does not exist). */

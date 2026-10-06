@@ -1,6 +1,7 @@
 import { listarCatalogoAtivo } from "./catalogo.server";
 import { createDocument, getDocument, updateDocument } from "./firestore.server";
 import { interpretarPedido } from "./interpretacao.server";
+import { calcularProposta, criarProposta } from "./propostas.server";
 
 export type EstadoPedido =
   "recebido" | "em_analise" | "necessita_revisao" | "proposta_criada" | "erro";
@@ -27,9 +28,10 @@ export async function savePedido(input: NovoPedido): Promise<"created" | "exists
 }
 
 /**
- * Interprets a saved request. Only runs while it is still "recebido", so calling it again
- * never reprocesses it. A failure is stored on the request (estado "erro", with the reason)
- * and rethrown; the request itself is never lost.
+ * Interprets a saved request and, when nothing needs review, calculates and creates its
+ * proposal. Only runs while the request is still "recebido", so calling it again never
+ * reprocesses it. A failure is stored on the request (estado "erro", with the reason) and
+ * rethrown; the request itself is never lost.
  */
 export async function processarPedido(id: string): Promise<EstadoPedido | "ignorado"> {
   const pedido = await getDocument("pedidos", id);
@@ -44,13 +46,23 @@ export async function processarPedido(id: string): Promise<EstadoPedido | "ignor
       String(pedido.data["textoOriginal"] ?? ""),
       catalogo,
     );
-    const estado: EstadoPedido = interpretacao.necessitaRevisao
-      ? "necessita_revisao"
-      : "em_analise";
+    let estado: EstadoPedido = "necessita_revisao";
+    let motivoRevisao = interpretacao.motivoRevisao;
+    let propostaId: string | null = null;
+    if (!interpretacao.necessitaRevisao) {
+      const calculo = calcularProposta(interpretacao, catalogo);
+      if (calculo.ok) {
+        propostaId = await criarProposta(id, interpretacao.resumo, calculo);
+        estado = "proposta_criada";
+      } else {
+        motivoRevisao = calculo.motivo;
+      }
+    }
     await updateDocument("pedidos", id, {
       interpretacao,
       informacaoEmFalta: interpretacao.informacaoEmFalta,
-      motivoRevisao: interpretacao.motivoRevisao,
+      motivoRevisao,
+      propostaId,
       estado,
       atualizadoEm: new Date(),
     });

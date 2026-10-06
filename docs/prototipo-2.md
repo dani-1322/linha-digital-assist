@@ -400,7 +400,57 @@ projetos para multiplicar a quota (seria contornar os limites do plano gratuito)
 
 ## Fase 3 — Cálculo e página da proposta
 
-_(a preencher)_
+**Resultado.** Quando a interpretação não precisa de revisão, o código calcula a proposta
+com os preços do catálogo, grava-a na coleção `propostas` e o pedido passa a
+`proposta_criada`. A proposta fica disponível em `/proposta/<token>`, com a identidade
+visual da landing page. Testado de ponta a ponta: um café com "2 páginas extra" e
+manutenção mensal resultou em `site-base` + `pagina-adicional` × 2 = **500,00 €** de
+pagamento único e **30,00 €/mês** de mensalidade, ambos sem IVA.
+
+### O cálculo é feito pelo código, com regras explícitas
+
+**Decisão.** `subtotal = quantidade × preço unitário`, em cêntimos inteiros: com
+quantidades inteiras, o produto é exato, e o arredondamento (`Math.round`) só protege essa
+garantia. Os pagamentos únicos e as mensalidades têm **totais separados**, nunca somados.
+Não há IVA, descontos nem estimativas. Os casos que o cálculo não suporta vão para revisão
+em vez de receberem um preço: serviço que deixou de estar ativo, quantidade por confirmar,
+ou um "pacote" com quantidade diferente de 1. Testado sem o Gemini, com o catálogo real,
+nos quatro casos.
+
+### A proposta guarda uma cópia de tudo o que usou
+
+**Decisão.** Cada proposta grava os nomes, descrições, condições, preços unitários,
+subtotais e totais, além do número, das datas de criação e validade (15 dias, configurável
+em `PROPOSTA_VALIDADE_DIAS`), da indicação de demonstração e dos campos da notificação
+(Fase 5). Uma alteração posterior ao catálogo não muda propostas já emitidas.
+
+### Sem propostas duplicadas
+
+**Decisão.** A proposta usa o identificador do pedido como o seu próprio identificador.
+Mesmo que um pedido seja processado duas vezes, a segunda criação encontra a proposta já
+existente e não cria outra. Isto soma-se à proteção da Fase 2 (só se processam pedidos em
+`recebido`; testado: a segunda chamada foi ignorada).
+
+### Página da proposta privada
+
+**Decisão.** O link contém um token aleatório de 256 bits, nunca sequencial, que é a única
+forma de chegar à proposta (o número `LD-AAAAMMDD-XXXXXX` é só para referência). A página:
+- só mostra a proposta para um token válido e não expirado; um token inválido e um token
+  bem formado mas inexistente recebem a mesma resposta, para não dar pistas;
+- não mostra o email do cliente nem o texto original do pedido (verificado no HTML);
+- tem `noindex, nofollow`, para não aparecer em motores de pesquisa, e `no-referrer`, para o
+  token não ser enviado a outros sites;
+- é gerada por um template da aplicação: o React escapa todo o texto, e nenhum HTML vindo
+  do modelo ou do cliente é renderizado;
+- formata valores e datas no servidor (`pt-PT`, hora de Lisboa), para o texto ser igual no
+  servidor e no navegador.
+
+Testado: proposta válida (todos os elementos presentes, email e texto original ausentes),
+token inválido, token inexistente e proposta expirada ("Esta proposta expirou", sem
+valores).
+
+O `robots.txt` continua a permitir o acesso: se bloqueasse `/proposta/`, os motores de
+pesquisa não chegariam a ler o `noindex`.
 
 ## Fase 4 — Administração
 
