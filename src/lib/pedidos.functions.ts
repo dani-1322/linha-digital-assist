@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { EMAIL_CONTACTO } from "./contacto";
 
 const PedidoInput = z.object({
   // Generated in the browser once per form, so resubmitting never creates a duplicate.
@@ -20,8 +21,7 @@ export const submitPedido = createServerFn({ method: "POST" })
       console.error("submitPedido failed", error instanceof Error ? error.message : error);
       return {
         ok: false,
-        error:
-          "Não foi possível enviar o pedido neste momento. Tente outra vez dentro de instantes ou escreva para daniel.alves.132203@gmail.com.",
+        error: `Não foi possível enviar o pedido neste momento. Tente outra vez dentro de instantes ou escreva para ${EMAIL_CONTACTO}.`,
       };
     }
   });

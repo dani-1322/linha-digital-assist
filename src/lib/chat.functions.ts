@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { EMAIL_CONTACTO } from "./contacto";
 
 const ChatInput = z.object({
   messages: z
@@ -24,7 +25,7 @@ export const askAssistant = createServerFn({ method: "POST" })
       console.error("askAssistant failed", code);
       const message =
         code === "MISSING_KEY"
-          ? "O assistente ainda não está configurado. Escreva para daniel.alves.132203@gmail.com."
+          ? `O assistente ainda não está configurado. Escreva para ${EMAIL_CONTACTO}.`
           : code === "GEMINI_503" || code === "GEMINI_429"
             ? "O assistente está com muita procura neste momento. Tente outra vez dentro de instantes ou marque o diagnóstico gratuito no botão abaixo."
             : "Não consegui responder neste momento. Tente outra vez dentro de instantes ou marque o diagnóstico gratuito no botão abaixo.";

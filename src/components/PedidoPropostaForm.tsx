@@ -1,12 +1,12 @@
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CalendarDays, CheckCircle2 } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
+import { EMAIL_CONTACTO } from "@/lib/contacto";
 import { processPedido, submitPedido } from "@/lib/pedidos.functions";
 
 type Estado = "editar" | "a_enviar" | "enviado" | "erro";
 
-const FALLBACK =
-  "Não foi possível enviar o pedido neste momento. Tente outra vez dentro de instantes ou escreva para daniel.alves.132203@gmail.com.";
+const FALLBACK = `Não foi possível enviar o pedido neste momento. Tente outra vez dentro de instantes ou escreva para ${EMAIL_CONTACTO}.`;
 
 const fieldClass =
   "w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:border-primary";

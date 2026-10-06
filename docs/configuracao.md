@@ -31,7 +31,7 @@ Variáveis ainda por preencher ficam como `ADMIN_UID=`.
 | `EMAIL_ALUNO` | Destinatário das notificações | O email associado à conta Resend |
 | `APP_BASE_URL` | Construir os links absolutos das propostas. Opcional: se faltar, usa o endereço do Lovable | `https://linha-digital-assist.lovable.app` |
 | `PROPOSTA_VALIDADE_DIAS` | Opcional. Validade das propostas em dias (por omissão, 15) | Um número inteiro, ex: `15` |
-| `ADMIN_UID` | Único utilizador autorizado no `/admin` | Entrar em `/admin` com a conta Google: a página "Sem acesso" mostra o identificador a usar |
+| `ADMIN_UID` | Único utilizador autorizado no `/admin` | Entrar em `/admin` com a conta Google do negócio: a página "Sem acesso" mostra o identificador a usar |
 
 ## O que é secreto e o que não é
 
@@ -45,8 +45,13 @@ segurança do Firestore e a verificação de autorização no backend.
 
 ## Serviços externos
 
+Os serviços do site estão na conta do negócio, `linhadigital.admin@gmail.com`, que é também o
+email de contacto público (`src/lib/contacto.ts`). O GitHub e o Lovable continuam na conta
+pessoal do aluno.
+
 ### Firebase
-- Projeto criado em console.firebase.google.com
+- Projeto `linha-digital`, criado em console.firebase.google.com. Proprietários: a conta do
+  negócio e a conta pessoal do aluno. Email de suporte: o da conta do negócio
 - **Cloud Firestore** ativo, em modo de produção
 - **Authentication** com o método de início de sessão **Google** ativo
 - Domínios autorizados no Authentication: `localhost` e `linha-digital-assist.lovable.app`
@@ -57,13 +62,16 @@ segurança do Firestore e a verificação de autorização no backend.
   navegador nunca acede ao Firestore: só o servidor, com a conta de serviço
 
 ### Resend
-- Conta criada com o email onde as notificações devem chegar
+- Conta criada com o email onde as notificações devem chegar (a conta do negócio, que é
+  também o `EMAIL_ALUNO`)
 - Remetente fixo: `onboarding@resend.dev`
 - **Sem domínio próprio, o Resend só aceita enviar para o email da própria conta.** É por
   isso que a notificação vai para o aluno e não para o cliente.
 
 ### Google AI Studio
-- Chave do Gemini com quota gratuita
+- Chave do Gemini com quota gratuita, no projeto `linha-digital-gemini` da conta do negócio
+- Esse projeto é separado do projeto do Firebase de propósito: se um dia o projeto do
+  Firebase passar a ter faturação (plano Blaze), o Gemini continua no nível gratuito
 - Não ativar billing nem mudar para modelos pagos
 - **Quota gratuita: 20 pedidos por dia, por modelo, contados por projeto e não por chave**
   (verificado a 5 de outubro de 2026). Renova à meia-noite da hora do Pacífico, cerca das
@@ -75,7 +83,7 @@ segurança do Firestore e a verificação de autorização no backend.
 ### Cal.com
 - Evento "Diagnóstico gratuito", 15 a 20 minutos
 - Ligado ao Google Calendar, com verificação de conflitos ativa
-- Link: https://cal.com/daniel-alves-qijnqz/15min
+- Link: https://cal.com/linha-digital/15min (conta com `linhadigital.admin@gmail.com`)
 
 ## Limites gratuitos a ter em conta
 

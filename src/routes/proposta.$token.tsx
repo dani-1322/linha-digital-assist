@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, Mail } from "lucide-react";
+import { EMAIL_CONTACTO as EMAIL } from "@/lib/contacto";
 import type { PropostaPublica } from "@/lib/propostas.server";
 import { getProposta } from "@/lib/propostas.functions";
 
@@ -21,8 +22,6 @@ export const Route = createFileRoute("/proposta/$token")({
   }),
   component: PropostaPage,
 });
-
-const EMAIL = "daniel.alves.132203@gmail.com";
 
 function PropostaPage() {
   const resultado = Route.useLoaderData();

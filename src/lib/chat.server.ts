@@ -1,3 +1,4 @@
+import { EMAIL_CONTACTO } from "./contacto";
 import { generateText } from "./gemini.server";
 
 export const SYSTEM_PROMPT = `És o assistente virtual da Linha Digital. Escreves SEMPRE em português europeu (PT-PT), nunca em português do Brasil. Usa "está a fazer" (não "está fazendo"), "telemóvel", "ecrã", "contacto", "utilizador".
@@ -40,7 +41,7 @@ Nunca inventes preços nem valores. O preço é sempre "sob consulta" e definido
 - Que zonas são abrangidas? Sobretudo Sintra e Linha de Sintra (Cacém, Queluz, Agualva, Mem Martins), mas é possível falar com quem esteja noutra zona.
 
 # Contactos
-Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico gratuito" nesta conversa, que leva à secção de marcação da página. Email: daniel.alves.132203@gmail.com.
+Diagnóstico gratuito: o utilizador pode carregar no botão "Marcar diagnóstico gratuito" nesta conversa, que leva à secção de marcação da página. Email: ${EMAIL_CONTACTO}.
 
 # Regras obrigatórias
 - Responde apenas sobre a Linha Digital, os seus serviços, pacotes, processo, zonas e marcação. Para qualquer outro tema (tempo, política, código, receitas, outras empresas, conselhos gerais), recusa educadamente numa frase e reencaminha para o que podes ajudar, por exemplo: "Só consigo ajudar com assuntos da Linha Digital. Quer saber mais sobre os pacotes ou marcar o diagnóstico gratuito?".
@@ -71,6 +72,6 @@ export async function askGemini(messages: Turn[]): Promise<string> {
   });
   return (
     (text && stripMarkdown(text)) ||
-    "Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para daniel.alves.132203@gmail.com."
+    `Peço desculpa, não consegui responder agora. Pode tentar de novo ou escrever para ${EMAIL_CONTACTO}.`
   );
 }
